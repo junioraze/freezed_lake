@@ -2,7 +2,8 @@
 *.tfstate
 *.tfstate.*
 .terraform/
-terraform.tfvars
+*/terraform.tfvars
 *.auto.tfvars
 license/*
 *.hcl
+.env

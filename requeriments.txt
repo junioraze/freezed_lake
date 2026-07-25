@@ -1,0 +1,3 @@
+pyiceberg
+python-dotenv
+selenium
