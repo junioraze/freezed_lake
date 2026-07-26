@@ -1,3 +1,6 @@
 pyiceberg
+pyiceberg[pyiceberg-core]
 python-dotenv
 selenium
+polars
+pyarrow

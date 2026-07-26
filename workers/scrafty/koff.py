@@ -1,69 +1,45 @@
 import copy
+import time
+import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+import requests
+import polars as pl
+from datetime import datetime
+from lakehouse_worker import LakehouseWorker, logger
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv; load_dotenv()
-import time
-import os
-import requests
-
-##config
-_from_txt = False #just for test
 
 #showdown
 GEN = os.getenv("GEN","gen4ou")
-RANGE = os.getenv("RANGE",30)
+RANGE = int(os.getenv("RANGE",30))
 URL_USER = "https://replay.pokemonshowdown.com/?format={}"
 TIMEOUT = os.getenv("TIMEOUT",10)
 
-#polaris
-POLARIS_ENDPOINT = os.getenv("POLARIS_ENDPOINT", "http://polaris:8181")
-POLARIS_PASS = os.getenv("POLARIS_USER", "")
-POLARIS_PASS = os.getenv("POLARIS_PASS", "")
-POLARIS_REALM = os.getenv("POLARIS_REALM")
+#target
+LAKEHOUSE_TABLE = os.getenv("LAKEHOUSE_TABLE")
 
-CATALOG_BUCKET = os.getenv("CATALOG_BUCKET")
-
-#minio
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://minio:9000")
-MINIO_USER = os.getenv("MINIO_USER", "")
-MINIO_PASS = os.getenv("MINIO_PASS", "")
-
-#dead
-def _execute_log(url):
-    text = requests.get(url).text
-    dir = "logs/"
-    filename = url.split('/')[-1]
-    with open(dir + filename, "w", encoding="utf-8") as file:
-        file.write(text)
-    print(f'persisted file... {url}')
-    
-def get_replay_dimensions(url):
+def extract_replay_data_dimensions(url):
     replay_id = url.split('-')[-1]
     data = requests.get(f'{url}.log').text
-    row = [replay_id]
-    time_catcher = '|t:|'
-    gen_catcher = '|gen|'
-    tier_catcher = '|tier|'
-    end_catcher = '|rule|'
-    extract = lambda x:str(x).split('|')[-1]
-    
-    for r in data.splitlines():
-        if r.startswith(time_catcher):
-            row.append(extract(r))
-        if r.startswith(gen_catcher):
-            row.append(extract(r))
-        if r.startswith(tier_catcher):
-            row.append(extract(r))
-        if r.startswith(end_catcher):
-            break
-        
-    row.append(data)
-    return row        
+    lines = data.splitlines()
+    ts_str = next((l.split('|')[-1] for l in lines if l.startswith('|t:|')), None)
+    gen = next((l.split('|')[-1] for l in lines if l.startswith('|gen|')), 'unknown')
+    tier = next((l.split('|')[-1] for l in lines if l.startswith('|tier|')), 'unknown')
+    return {
+        "replay_id": replay_id,
+        "gen": gen,
+        "tier": tier,
+        "ts_str": ts_str or "0",
+        "raw_log": data
+    }
 
-def get_replays_list(browser):
+def extract_replays_list(browser):
     report = []
     first = True
     page_n = 1
@@ -104,18 +80,39 @@ def get_replays_list(browser):
             
     return copy.copy(report)
 
-if __name__ == "__main__":
-
+def main():
+    logger.info(f"Iniciando extração dos dados")
     browser = webdriver.Chrome()
-    if _from_txt:
-        with open('replays.txt','r') as file:
-            replays = [replay.replace('\n','') for replay in file.readlines()]        
-    else:
-        replays = get_replays_list(browser)
-        browser.quit()
-        
-    for r in replays:
-        print(get_replay_dimensions(r))
+    replays = extract_replays_list(browser)
+    browser.quit()
+    raw_data = [extract_replay_data_dimensions(r) for r in replays]
+    
+    logger.info(f"Montando batch de importação")
+    df = pl.DataFrame(raw_data)
+    df = df.with_columns([
+        pl.col("ts_str")
+            .cast(pl.Int64, strict=False)
+            .mul(1000)
+            .cast(pl.Datetime(time_unit='ms'))
+            .alias("replay_timestamp"),
+        pl.lit(datetime.now())
+            .alias("ingestion_timestamp")
+    ]).drop('ts_str')
+    arrow_batch = df.to_arrow()
+    
+    logger.info(f"Inserindo em {LAKEHOUSE_TABLE}")
+    worker = LakehouseWorker()
+    table = worker.get_table(LAKEHOUSE_TABLE)
+    table_schema = table.schema().as_arrow()
+    schema_field_order = [field.name for field in table_schema]
+    #forçando schema
+    arrow_batch = arrow_batch.select(schema_field_order)
+    table.append(arrow_batch.cast(table_schema))
+    logger.info(f"Dados importados em {LAKEHOUSE_TABLE}")
+    
+
+if __name__ == "__main__":
+    main()
 
 
 

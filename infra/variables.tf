@@ -8,6 +8,12 @@ variable "minio_pass" {
   type        = string
 }
 
+variable "minio_external_endpoint" {
+  description = "Endpoint externo 'localhost' para testes"
+  type = string
+  default = "http://localhost:9000"
+}
+
 variable "polaris_user" {
   description = "Admin do Polaris"
   type        = string

@@ -6,7 +6,13 @@ from pyiceberg.exceptions import NamespaceAlreadyExistsError, TableAlreadyExists
 from dotenv import load_dotenv
 
 load_dotenv()
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logger = logging.getLogger("global")
 
 class LakehouseWorker:
     """
@@ -74,7 +80,7 @@ class LakehouseWorker:
                 "s3.secret-access-key": self.minio_pass,
                 "s3.region": "us-east-1",
                 "s3.path-style-access": "true",
-                "headers.X-Iceberg-Access-Delegation": "none",
+                "header.X-Iceberg-Access-Delegation": "false",
             }
         )             
         return self._catalog
@@ -97,22 +103,29 @@ class LakehouseWorker:
             raise
 
     def create_table_if_not_exists(self, table_identifier: str, schema, partition_spec, 
-                                   properties=None, location=None):
+                                    location=None):
         """Cria tabela se não existir (ignora AlreadyExists)."""
+        properties = {
+            "write.format.default": "parquet",
+            "write.parquet.compression-codec": "zstd",   # Alta compressão
+            "write.metadata.compression-codec": "gzip",
+            "write.metadata.metrics.default": "full",    # Para consultas rápidas
+            "read.split.target-size": "128MB",
+        }
         catalog = self.get_catalog()
         try:
             table = catalog.create_table(
                 identifier=table_identifier,
                 schema=schema,
                 partition_spec=partition_spec,
-                properties=properties or {},
+                properties=properties,
                 location=location,
             )
             logger.info(f"Tabela '{table_identifier}' criada.")
             return table
         except TableAlreadyExistsError:
             logger.info(f"Tabela '{table_identifier}' já existe. Carregando...")
-            return catalog.load_table(table_identifier)
+            
         except Exception as e:
             # Ignora erro específico do STS (já tratado no formation)
             if "Credential vending was requested" not in str(e):

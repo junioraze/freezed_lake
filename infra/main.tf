@@ -159,7 +159,7 @@ resource "null_resource" "create_polaris_catalog" {
             "storageType": "S3",
             "properties": {
               "default-base-location": "s3://${var.catalog_bucket}",
-              "table-default.s3.endpoint": "http://localhost:9000",
+              "table-default.s3.endpoint": "${var.minio_external_endpoint}",
               "table-default.s3.endpoint-internal": "http://minio:9000",
               "table-default.s3.path-style-access": "true",
               "table-default.s3.region": "us-east-1"
@@ -167,7 +167,7 @@ resource "null_resource" "create_polaris_catalog" {
             "storageConfigInfo": {
               "storageType": "S3",
               "allowedLocations": ["s3://${var.catalog_bucket}"],
-              "endpoint": "http://minio:9000",
+              "endpoint": "${var.minio_external_endpoint}",
               "endpointInternal": "http://minio:9000",
               "pathStyleAccess": true,
               "region": "us-east-1",
