@@ -1,34 +1,52 @@
-FROM python:3.13-slim
+# ==========================================
+# BASE
+# ==========================================
+FROM python:3.13-slim AS base
 
-# Instala o Chromium, o driver nativo via apt-get, e o curl para puxar o UV
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
-    chromium-driver \
-    curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Adiciona o UV ao PATH do sistema
 ENV PATH="/root/.local/bin:$PATH"
-
-# Informa explicitamente ao Selenium/OS onde os binários do Chromium estão localizados
-ENV CHROME_BIN=/usr/bin/chromium
-ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
-
-# Define o diretório de trabalho padrão do container
 WORKDIR /app
 
-# Copia os metadados do pacote (pyproject.toml)
+# Copias 
 COPY pyproject.toml .
-
-# Copia os códigos-fonte do SDK base e dos workers soltos
 COPY src/ ./src/
 COPY workers/ ./workers/
 
-# Copia e garante permissão de execução do Entrypoint
-COPY entrypoint_obamasnow.sh .
-RUN chmod +x entrypoint_obamasnow.sh
+# Instala apenas as dependências core (pyiceberg, pyarrow)
+RUN uv pip install --system -e .
 
-# Define o script customizado como a porta de entrada imutável da imagem
-ENTRYPOINT ["/app/entrypoint_obamasnow.sh"]
+
+ENTRYPOINT ["python"]
+
+
+# ==========================================
+# VARIANT: TRANSFORMER 
+# ==========================================
+FROM base AS transformer
+
+# Instala o pacote polars para transformações
+RUN uv pip install --system -e ".[transformer]"
+
+
+# ==========================================
+# VARIANT: SCRAPER 
+# ==========================================
+FROM base AS scraper
+
+# Adiciona o Chromium e o driver nativo apenas nesta camada superior
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    chromium-driver \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Informa explicitamente ao Selenium onde os binários estão
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
+# Instala as dependências de scraping e transformação
+RUN uv pip install --system -e ".[scraper,transformer]"

@@ -70,7 +70,7 @@ resource "docker_container" "polaris" {
     "AWS_ACCESS_KEY_ID=${var.minio_user}",
     "AWS_SECRET_ACCESS_KEY=${var.minio_pass}",
     "AWS_REGION=us-east-1",
-    "AWS_ENDPOINT_URL_S3=http://minio:9000",
+    "AWS_ENDPOINT_URL_S3=${var.minio_external_endpoint}",
     "POLARIS_PORT=8181",
     "POLARIS_STORAGE_TYPE=S3",
     "POLARIS_BOOTSTRAP_CREDENTIALS=${var.polaris_relm},${var.polaris_user},${var.polaris_pass}",
@@ -105,7 +105,7 @@ resource "null_resource" "create_minio_bucket" {
       echo "W8 MinIO health check..."
       # check probe
       while [ "$(docker run --rm --network ${docker_network.lakehouse_net.name} \
-               curlimages/curl -s -o /dev/null -w '%%{http_code}' http://minio:9000/minio/health/ready)" != "200" ]; do
+               curlimages/curl -s -o /dev/null -w '%%{http_code}' ${var.minio_external_endpoint}/minio/health/ready)" != "200" ]; do
         sleep 2
       done
 
@@ -114,7 +114,7 @@ resource "null_resource" "create_minio_bucket" {
       docker run --rm --network ${docker_network.lakehouse_net.name} \
         --entrypoint sh \
         minio/mc -c "
-          mc alias set myminio http://minio:9000 '${var.minio_user}' '${var.minio_pass}' && \
+          mc alias set myminio ${var.minio_external_endpoint} '${var.minio_user}' '${var.minio_pass}' && \
           mc mb myminio/${var.catalog_bucket}
         "
     EOT
@@ -160,7 +160,7 @@ resource "null_resource" "create_polaris_catalog" {
             "properties": {
               "default-base-location": "s3://${var.catalog_bucket}",
               "table-default.s3.endpoint": "${var.minio_external_endpoint}",
-              "table-default.s3.endpoint-internal": "http://minio:9000",
+              "table-default.s3.endpoint-internal": "${var.minio_external_endpoint}",
               "table-default.s3.path-style-access": "true",
               "table-default.s3.region": "us-east-1"
             },
@@ -168,7 +168,7 @@ resource "null_resource" "create_polaris_catalog" {
               "storageType": "S3",
               "allowedLocations": ["s3://${var.catalog_bucket}"],
               "endpoint": "${var.minio_external_endpoint}",
-              "endpointInternal": "http://minio:9000",
+              "endpointInternal": "${var.minio_external_endpoint}",
               "pathStyleAccess": true,
               "region": "us-east-1",
               "stsUnavailable": true,

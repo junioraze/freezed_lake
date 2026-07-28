@@ -144,5 +144,4 @@ class LakehouseWorker:
             self.logger.info(f"Ingestão concluida, {len(data)} registros incluidos.")
         except Exception as e:
             self.logger.error(f"Falha no contrato de dados ao ingerir: {e}")
-            self.logger.error(f"{self.minio_endpoint}")
             raise            
