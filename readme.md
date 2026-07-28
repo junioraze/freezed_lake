@@ -4,13 +4,15 @@ Projeto para provisionamento de um **lakehouse local** utilizando **MinIO** (arm
 
 Na versão 0.1.0, o projeto foi reestruturado utilizando um padrão de SDK interno (`obamasnow`) para garantir contratos de dados estritos durante a ingestão. As execuções foram padronizadas através de uma imagem Docker universal ("Runner") gerenciada pelo `uv`, preparando o terreno para a orquestração via DAGU.
 
+
 > **Aviso de Segurança e Escopo (Projeto de Estudo)**
+> 
+> A documentação até o momento é feita por IA eu só faço uma mini revisão, futuramente trabalho com foco nela.
 > Licença GNU em licenses/ ; a licença do MinIO vc precisa inserir apos se cadastrar para receber uma.
 > Este projeto foi desenvolvido com fins estritamente didáticos e focado no aprendizado da engenharia de dados (arquitetura Lakehouse, Iceberg e orquestração). Por isso, ele possui **arquiteturas e falhas de segurança** que não devem ser replicadas em ambientes de produção:
 > * **Bypass de Segurança do S3:** Estamos contornando o modelo padrão e seguro de nuvem (como o AWS STS - *Security Token Service*), conectando ao storage através de chaves de acesso estáticas e permissões amplas, em vez de assumir *roles* temporárias (Credential Vending). Nesse projeto o STS não será implementado, a não ser que me obriguem. 
 > * **Gestão de Credenciais:** Senhas e tokens de API trafegam de forma explícita nas requisições e estão mapeadas em texto plano no ambiente (`.env`), sem a utilização de um cofre de segredos (Secret Manager). Esse ponto será implementado.
 ---
-
 ## Visão Geral
 
 * **Infraestrutura** (Terraform): containers Docker do MinIO e Polaris, rede dedicada, volumes persistentes e criação automática de bucket e catálogo.
@@ -28,7 +30,7 @@ Na versão 0.1.0, o projeto foi reestruturado utilizando um padrão de SDK inter
 
 
 
-* **Makefile**: Atalhos automatizados para provisionar a infraestrutura e rodar a imagem efêmera dos workers diretamente na rede do banco (`lakehouse_net`).
+* **Makefile**: Atalhos automatizados para provisionar a infraestrutura e rodar a imagem efêmera dos workers diretamente na rede do projeto (`lakehouse_net`).
 
 
 
@@ -41,7 +43,7 @@ Na versão 0.1.0, o projeto foi reestruturado utilizando um padrão de SDK inter
 
 * **Terraform** (>= 1.0).
 
-* **Licença MinIO FREE incluida em licenses/
+* **Licença MinIO FREE** (incluida em licenses/)
 
 * **make** (para automatização dos comandos). (OPT)
 
@@ -166,7 +168,7 @@ make or-run-insert-logs
 
 ## Melhorias Futuras
 
-* **Orquestração com DAGU**: Integrar os comandos de `docker run` configurados no Makefile diretamente nos arquivos YAML do DAGU para agendamento e monitoramento de falhas.
+* **Orquestração com DAGU**: Integrar os comandos de `docker run` configurados no Makefile diretamente nos arquivos YAML do DAGU para agendamento e monitoramento de falhas. Melhorias junto ao Obamasnow para injeção de variáveis de ambiente. 
 * **Derivação**: Aplicar o processamento (Polars) em novos scripts na pasta `workers/derive/` para criar as camadas *Silver/Gold*.
 * **Observabilidade**: Evoluir o `telemetry.py` conectando o logger padrão com provedores do OpenTelemetry.
 * **Governança**: Refinar os controles de acesso e permissões (RBAC) simulados pelo Polaris para fins de estudo.
