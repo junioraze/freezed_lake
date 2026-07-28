@@ -1,13 +1,14 @@
 # Makefile - Surf
 
-# Variáveis com os caminhos relativos (sempre a partir da raiz)
+# Variáveis Terraform
 TERRAFORM_DIR = infra
-WORKER_DITTO_DIR = workers/ditto
-WORKER_SCRAFTY_DIR = workers/scrafty
-
-# Comandos 
-PYTHON = python.exe
 TERRAFORM = terraform
+
+# Variáveis Obamasnow-runner
+IMAGE_NAME = obamasnow-runner:latest
+NETWORK_NAME = lakehouse_net
+ENV_FILE = obamasnow/src/obamasnow/.env
+
 
 # --------------------------------------------------------------
 # TARGETS PARA TERRAFORM
@@ -34,29 +35,28 @@ tf-output:
 	cd $(TERRAFORM_DIR) && $(TERRAFORM) output
 
 # --------------------------------------------------------------
-# TARGETS PARA PYTHON (workers)
+# TARGETS PARA Obamasnow-runner
 # --------------------------------------------------------------
+.PHONY: or-build-runner or-run-create-raw or-run-insert-logs
 
-.PHONY: run-ditto run-scrafty
+or-build-runner:
+	@echo "Construindo a imagem Docker $(IMAGE_NAME)..."
+	docker build -t $(IMAGE_NAME) obamasnow/.
 
-# Roda o formation.py do ditto
-run-ditto:
-	cd $(WORKER_DITTO_DIR) && $(PYTHON) formation.py
+or-run-create-raw:
+	@echo "Executando raw_layer.py na rede $(NETWORK_NAME)..."
+	docker run --rm \
+		--network $(NETWORK_NAME) \
+		--env-file $(ENV_FILE) \
+		$(IMAGE_NAME) \
+		python workers/create/raw_layer.py
 
-run-scrafty:
-	cd $(WORKER_SCRAFTY_DIR) && $(PYTHON) koff.py
 
-# --------------------------------------------------------------
-# TARGET GENÉRICO PARA RODAR QUALQUER SCRIPT PYTHON
-# --------------------------------------------------------------
-
-.PHONY: run
-
-run:
-	@if [ -z "$(SCRIPT)" ]; then \
-		echo "Uso: make run SCRIPT=workers/ditto/formation.py"; \
-		exit 1; \
-	fi
-	@dir=$$(dirname $(SCRIPT)); \
-	file=$$(basename $(SCRIPT)); \
-	cd $$dir && $(PYTHON) $$file
+or-run-insert-logs:
+	@echo "Executando into_raw_replay_logs.py na rede $(NETWORK_NAME)..."
+	docker run --rm \
+		--network $(NETWORK_NAME) \
+		--env-file $(ENV_FILE) \
+		-e UV_EXTRAS="scraper,transformer" \
+		$(IMAGE_NAME) \
+		python workers/insert/into_raw_replay_logs.py

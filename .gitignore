@@ -7,3 +7,5 @@
 license/*
 *.hcl
 .env
+adhoc_zone
+*.egg-info

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "obamasnow"
+version = "0.1.0"
+description = "Base para os workers com garantia do uso correto da integração."
+dependencies = [
+    "pyiceberg",
+    "pyiceberg[pyiceberg-core]",
+    "pyarrow",
+    "python-dotenv"
+]
+
+[project.optional-dependencies]
+transformer = ["polars"]
+scraper = ["selenium"]  
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["obamasnow/src/obamasnow*"]
+exclude = ["workers*"]
