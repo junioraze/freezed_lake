@@ -1,4 +1,5 @@
 import copy
+import os
 from pathlib import Path
 import time
 import requests
@@ -11,17 +12,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from obamasnow.worker import LakehouseWorker
-from dotenv import load_dotenv
-
-load_dotenv()
 
 _GEN = "gen4ou"
-_RANGE = 30
+_RANGE = int(os.getenv('RANGE'))
 _URL_USER = "https://replay.pokemonshowdown.com/?format={}"
 _TIMEOUT = 10
 _WORKER_NAME = f"{Path(__file__).parent.name}-{Path(__file__).stem}"
-_NAME_SPACE = "raw"
-_TABLE_NAME = "replay_logs"
+_NAME_SPACE = os.getenv("NAME_SPACE")
+_TABLE_NAME = os.getenv("TABLE_NAME")
 _LH_TABLE = f"{_NAME_SPACE}.{_TABLE_NAME}"
 
 def get_browser():

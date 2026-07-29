@@ -30,7 +30,7 @@ Na versão 0.1.0, o projeto foi reestruturado utilizando um padrão de SDK inter
 
 
 
-* **Makefile**: Atalhos automatizados para provisionar a infraestrutura e rodar a imagem efêmera dos workers diretamente na rede do projeto (`lakehouse_net`).
+* **Makefile**: Atalhos automatizados para provisionar a infraestrutura e rodar a imagem dos workers diretamente na rede do projeto (`lakehouse_net`).
 
 
 
@@ -104,15 +104,16 @@ Execute os comandos para inicializar e aplicar os containers de armazenamento e 
 ```bash
 make tf-init          # Inicializa o Terraform
 make tf-apply         # Aplica o plano (cria containers, rede e volumes)
+...                   # Outros comandos opcionais
 
 ```
 
 ### 2. Construir a imagem base dos Workers (Runner)
 
-A arquitetura utiliza uma única imagem Docker (Python 3.13-slim com Chromium instalado) que resolve dependências dinamicamente via `uv` no momento da execução. Para construí-la, rode:
+A arquitetura utiliza três imagens que gradativamente instalam dependencias, dessa forma você delega só o recurso necessário para um worker.
 
 ```bash
-make or-build-runner
+make or-build-all #builda a base, o scraper e o transformer
 
 ```
 
@@ -125,9 +126,9 @@ make or-run-create-raw
 
 ```
 
-### 4. Ingerir Dados (Scraper e DML)
+### 4. Ingerir Dados (Scraper e Transform)
 
-Execute o worker de extração. O *entrypoint* do container injetará as dependências extras (`scraper`, `transformer`) dinamicamente antes de iniciar o Selenium e enviar os dados para o MinIO:
+Execute o worker de extração.
 
 ```bash
 make or-run-insert-logs
@@ -146,8 +147,7 @@ make or-run-insert-logs
 │   ├── variables.tf
 │   └── terraform.tfvars
 ├── obamasnow/                     # Base SDK do projeto
-│   ├── Dockerfile                 # Imagem Runner com dependências do Chromium
-│   ├── entrypoint_obamasnow.sh    # Script Bash de injeção dinâmica do UV
+│   ├── Dockerfile                 # Imagem Runner com variantes
 │   ├── pyproject.toml             # Configuração do pacote obamasnow
 │   └── src/
 │       └── obamasnow/

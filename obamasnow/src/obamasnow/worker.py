@@ -4,10 +4,7 @@ import requests
 import pyarrow as pa
 from pyiceberg.catalog import load_catalog
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, TableAlreadyExistsError
-from dotenv import load_dotenv
 from .telemetry import get_logger
-
-load_dotenv()
 
 class LakehouseWorker:
     """

@@ -13,13 +13,19 @@ ENV_FILE = obamasnow/src/obamasnow/.env
 # TARGETS PARA TERRAFORM
 # --------------------------------------------------------------
 
-.PHONY: tf-init tf-plan tf-apply tf-destroy tf-output tf-full-start tf-full-start-debug
+.PHONY: tf-format tf-init tf-plan tf-validate tf-apply tf-destroy tf-output tf-full-start tf-full-start-debug
+
+tf-format:
+	cd $(TERRAFORM_DIR) && $(TERRAFORM) fmt
 
 tf-init:
 	cd $(TERRAFORM_DIR) && $(TERRAFORM) init -upgrade
 
 tf-plan:
 	cd $(TERRAFORM_DIR) && $(TERRAFORM) plan
+
+tf-validate:
+	cd $(TERRAFORM_DIR) && $(TERRAFORM) validate
 
 tf-apply:
 	cd $(TERRAFORM_DIR) && $(TERRAFORM) apply -auto-approve

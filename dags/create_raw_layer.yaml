@@ -1,0 +1,36 @@
+name: "create-raw-layer"
+description: "Create namespace and table. Simple worker for test."
+schedule: ""
+
+dotenv: "/dags/.env.global"
+
+params:
+  - name: NAME_SPACE
+    type: string
+    default: raw
+  - name: TABLE_NAME
+    type: string
+    default: replay_logs
+
+steps:
+  - name: run-create-raw-layer-worker
+    container:
+      # worker config
+      image: obamasnow-base:latest
+      network: lakehouse_net
+      
+      env:
+        # job variables
+        - NAME_SPACE=${params.NAME_SPACE}
+        - TABLE_NAME=${params.TABLE_NAME}
+        # env variables
+        - POLARIS_ENDPOINT=${env.POLARIS_ENDPOINT}
+        - POLARIS_REALM=${env.POLARIS_REALM}
+        - POLARIS_USER=${env.POLARIS_USER}
+        - POLARIS_PASS=${env.POLARIS_PASS}
+        - MINIO_ENDPOINT=${env.MINIO_ENDPOINT}
+        - MINIO_USER=${env.MINIO_USER}
+        - MINIO_PASS=${env.MINIO_PASS}
+        - CATALOG_BUCKET=${env.CATALOG_BUCKET}
+    # python entrypoint direct to script
+    run: workers/create/raw_layer.py

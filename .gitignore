@@ -9,3 +9,5 @@ license/*
 .env
 adhoc_zone
 *.egg-info
+.env.global
+.dag.index

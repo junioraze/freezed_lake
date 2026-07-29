@@ -1,3 +1,20 @@
+#DAGU Env variables Global
+
+resource "local_file" "dagu_global_env" {
+  filename = "${abspath(path.module)}/${var.dagu_dags_path}/.env.global"
+  content  = <<-EOT
+    # Endpoints internos (pois os workers rodarão dentro da lakehouse_net)
+    POLARIS_ENDPOINT=${var.polaris_external_endpoint}
+    POLARIS_REALM=${var.polaris_relm}
+    POLARIS_USER=${var.polaris_user}
+    POLARIS_PASS=${var.polaris_pass}
+    MINIO_ENDPOINT=${var.minio_external_endpoint}
+    MINIO_USER=${var.minio_user}
+    MINIO_PASS=${var.minio_pass}
+    CATALOG_BUCKET=${var.catalog_bucket}
+  EOT
+}
+
 # Network
 
 resource "docker_network" "lakehouse_net" {
@@ -12,6 +29,10 @@ resource "docker_volume" "minio_data" {
 
 resource "docker_volume" "polaris_data" {
   name = "polaris_data"
+}
+
+resource "docker_volume" "dagu_data" {
+  name = "dagu_data"
 }
 
 # MinIO Container
@@ -92,6 +113,55 @@ resource "docker_container" "polaris" {
 
 }
 
+# DAGU Container
+resource "docker_container" "dagu" {
+  name = "dagu"
+  image = "ghcr.io/dagucloud/dagu:latest"
+  user = "0:0"
+  networks_advanced {
+    name = docker_network.lakehouse_net.name
+  }
+
+  volumes {
+    volume_name = docker_volume.dagu_data.name
+    container_path = "/var/lib/dagu"
+  }
+
+  # External access to host docker
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
+  } 
+
+  # DAGS directory
+  volumes {
+    host_path      = "${abspath(path.module)}/${var.dagu_dags_path}"
+    container_path = "/dags"
+  }
+
+  ports {
+    internal = var.dagu_port
+    external = var.dagu_port
+  }
+
+  env = [ 
+    "DAGU_DAGS_DIR=/dags",
+    "DAGU_PORT=${var.dagu_port}",
+    "DAGU_AUTH_MODE=none"
+   ]
+
+  entrypoint = ["/usr/bin/tini", "--", "dagu", "start-all"]
+  # null_resource have health_check probes to polaris and minio
+  # dagu depends of this to work + envs
+  depends_on = [
+      null_resource.create_minio_bucket, 
+      null_resource.create_polaris_catalog, 
+      local_file.dagu_global_env
+    ]
+}
+
+
+
 resource "null_resource" "create_minio_bucket" {
   depends_on = [docker_container.minio]
 
@@ -138,7 +208,7 @@ resource "null_resource" "create_polaris_catalog" {
 
       echo "Obtaining Polaris access token..."
       RESPONSE=$(docker run --rm --network ${docker_network.lakehouse_net.name} curlimages/curl -s \
-        http://polaris:8181/api/catalog/v1/oauth/tokens \
+        ${var.polaris_external_endpoint}/api/catalog/v1/oauth/tokens \
         -H 'Polaris-Realm: ${var.polaris_relm}' \
         -d 'grant_type=client_credentials' \
         -d 'client_id=${var.polaris_user}' \
@@ -150,7 +220,7 @@ resource "null_resource" "create_polaris_catalog" {
       echo "Creating catalog '${var.catalog_bucket}' on Polaris..."
       docker run --rm --network ${docker_network.lakehouse_net.name} \
         curlimages/curl -s -X POST \
-        http://polaris:8181/api/management/v1/catalogs \
+        ${var.polaris_external_endpoint}/api/management/v1/catalogs \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $POLARIS_TOKEN" \
         -d '{
@@ -178,7 +248,7 @@ resource "null_resource" "create_polaris_catalog" {
       echo "Granting CATALOG_MANAGE_CONTENT to catalog_admin... (Minio issue with STS)"
       docker run --rm --network ${docker_network.lakehouse_net.name} \
         curlimages/curl -s -X PUT \
-        http://polaris:8181/api/management/v1/catalogs/${var.catalog_bucket}/catalog-roles/catalog_admin/grants \
+        ${var.polaris_external_endpoint}/api/management/v1/catalogs/${var.catalog_bucket}/catalog-roles/catalog_admin/grants \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $POLARIS_TOKEN" \
         -d '{"type":"catalog", "privilege":"CATALOG_MANAGE_CONTENT"}'

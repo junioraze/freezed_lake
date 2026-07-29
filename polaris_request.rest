@@ -1,0 +1,56 @@
+### ============================================================================
+### Variables
+### ============================================================================
+@polaris_endpoint = http://localhost:8181
+@polaris_realm = POLARIS
+@polaris_user = root
+@polaris_pass = s3cr3t
+@catalog_name = lake
+@namespace_target = raw
+@table_target = replay_logs
+
+### ============================================================================
+### AUTH
+### ============================================================================
+
+# @name login
+POST {{polaris_endpoint}}/api/catalog/v1/oauth/tokens
+Polaris-Realm: {{polaris_realm}}
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&client_id={{polaris_user}}&client_secret={{polaris_pass}}&scope=PRINCIPAL_ROLE:ALL
+
+### Bearer
+@token = {{login.response.body.access_token}}
+
+
+### ============================================================================
+### GET Catalogs
+### ============================================================================
+
+### 2.1. List namespaces
+GET {{polaris_endpoint}}/api/catalog/v1/{{catalog_name}}/namespaces
+Authorization: Bearer {{token}}
+Polaris-Realm: {{polaris_realm}}
+
+---
+### 2.2. Inspect namespace
+GET {{polaris_endpoint}}/api/catalog/v1/{{catalog_name}}/namespaces/{{namespace_target}}
+Authorization: Bearer {{token}}
+Polaris-Realm: {{polaris_realm}}
+
+
+### ============================================================================
+### Get Data Contracts
+### ============================================================================
+
+### 3.1. List Tables in Namespace
+GET {{polaris_endpoint}}/api/catalog/v1/{{catalog_name}}/namespaces/{{namespace_target}}/tables
+Authorization: Bearer {{token}}
+Polaris-Realm: {{polaris_realm}}
+
+---
+### 3.2. Load table metadata
+GET {{polaris_endpoint}}/api/catalog/v1/{{catalog_name}}/namespaces/{{namespace_target}}/tables/{{table_target}}
+Authorization: Bearer {{token}}
+Polaris-Realm: {{polaris_realm}}

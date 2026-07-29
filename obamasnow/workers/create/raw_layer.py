@@ -1,4 +1,5 @@
 # workers/raw_layer.py
+import os
 from pathlib import Path
 from obamasnow.worker import LakehouseWorker
 from pyiceberg.schema import Schema, NestedField
@@ -7,8 +8,8 @@ from pyiceberg.partitioning import PartitionSpec, PartitionField
 from pyiceberg.transforms import IdentityTransform, DayTransform
 
 _WORKER_NAME = f"{Path(__file__).parent.name}-{Path(__file__).stem}"
-_NAME_SPACE = "raw"
-_TABLE_NAME = "replay_logs"
+_NAME_SPACE = os.getenv("NAME_SPACE")
+_TABLE_NAME = os.getenv("TABLE_NAME")
 _LH_TABLE = f"{_NAME_SPACE}.{_TABLE_NAME}"
 
 def main():
