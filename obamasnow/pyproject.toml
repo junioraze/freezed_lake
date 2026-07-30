@@ -12,7 +12,14 @@ dependencies = [
 
 [project.optional-dependencies]
 transformer = ["polars"]
-scraper = ["selenium"]  
+scraper = ["selenium","aiohttp"]
+lab = [
+    "altair",
+    "jupyterlab",
+    "notebook",
+    "jupyterlab-night", 
+    "ipywidgets",        
+]  
 
 [tool.setuptools.packages.find]
 where = ["src"]

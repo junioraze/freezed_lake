@@ -50,3 +50,22 @@ ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Instala as dependências de scraping e transformação
 RUN uv pip install --system -e ".[scraper,transformer]"
+
+# ==========================================
+# VARIANT: LAB (JupyterLab)
+# ==========================================
+FROM base AS lab
+
+# Instala dependências do JupyterLab
+RUN uv pip install --system -e ".[lab,transformer]"
+
+# Configura JupyterLab para usar o tema escuro por padrão
+RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension
+RUN echo '{"theme": "JupyterLab Dark"}' > /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/themes.jupyterlab-settings
+
+# Expõe a porta padrão do JupyterLab
+EXPOSE 8888
+
+# Comando padrão: inicia o JupyterLab
+ENTRYPOINT []
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]

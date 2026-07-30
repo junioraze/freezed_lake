@@ -17,7 +17,7 @@ params:
     default: 100
 
 steps:
-  - name: run-insert-raw-replay-logs
+  - name: run-insert_raw_replay_logs
     container:
       # worker config
       image: obamasnow-scraper:latest

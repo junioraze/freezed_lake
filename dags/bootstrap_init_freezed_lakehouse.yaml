@@ -1,28 +1,17 @@
-name: "create_raw_layer"
-description: "Create namespace and table. Simple worker for test."
+name: "bootstrap_init_freezed_lakehouse"
+description: "Initiate or recover lakehouse catalog."
 schedule: ""
 
 dotenv: "/dags/.env.global"
 
-params:
-  - name: NAME_SPACE
-    type: string
-    default: raw
-  - name: TABLE_NAME
-    type: string
-    default: replay_logs
-
 steps:
-  - name: run-create_raw_layer
+  - name: run-bootstrap_init_freezed_lakehouse
     container:
       # worker config
       image: obamasnow-base:latest
       network: lakehouse_net
       
       env:
-        # job variables
-        - NAME_SPACE=${params.NAME_SPACE}
-        - TABLE_NAME=${params.TABLE_NAME}
         # env variables
         - POLARIS_ENDPOINT=${env.POLARIS_ENDPOINT}
         - POLARIS_REALM=${env.POLARIS_REALM}
@@ -33,4 +22,4 @@ steps:
         - MINIO_PASS=${env.MINIO_PASS}
         - CATALOG_BUCKET=${env.CATALOG_BUCKET}
     # python entrypoint direct to script
-    run: workers/create/raw_layer.py
+    run: workers/bootstrap/init_freezed_lakehouse.py

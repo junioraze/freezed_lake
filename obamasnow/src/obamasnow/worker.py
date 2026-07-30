@@ -32,7 +32,7 @@ class LakehouseWorker:
         self._catalog = None  # lazy loading
         self._token = None
         
-    def _get_token(self) -> str:
+    def get_token(self) -> str:
         """Obtém e cacheia o token OAuth2."""
         if self._token:
             return self._token
@@ -58,7 +58,7 @@ class LakehouseWorker:
         if self._catalog:
             return self._catalog
         
-        token = self._get_token()
+        token = self.get_token()
         self._catalog = load_catalog(
             "polaris",
             **{
@@ -100,6 +100,7 @@ class LakehouseWorker:
             "write.format.default": "parquet",
             "write.parquet.compression-codec": "zstd",   # Alta compressão
             "write.metadata.compression-codec": "gzip",
+            "write.target-file-size-bytes": "536870912",  # 512 MB
             "write.metadata.metrics.default": "full",    # Para consultas rápidas
             "read.split.target-size": "128MB",
         }
@@ -125,7 +126,7 @@ class LakehouseWorker:
         
         
         
-    def ingest_pyarrow_data(self, table_identifier: str, data: pa.Table):
+    def ingest_pyarrow_data(self, table_identifier: str, data: pa.Table, batch_size: int = 10000):
         """
         Garante o contrato de dados: Valida o DataFrame do Polars contra
         o schema do Iceberg, reordena, faz o cast e ingere.
@@ -136,9 +137,17 @@ class LakehouseWorker:
         schema_field_order = [field.name for field in table_schema]
         
         try:
-            arrow_batch = data.select(schema_field_order)
-            table.append(arrow_batch.cast(table_schema))
-            self.logger.info(f"Ingestão concluida, {len(data)} registros incluidos.")
+            data = data.select(schema_field_order)
+            batches = data.to_batches(max_chunksize=batch_size)
+            total_inserted = 0
+            
+            for batch in batches:
+                batch_table = pa.Table.from_batches([batch])
+                batch_casted = batch_table.cast(table_schema)
+                table.append(batch_casted)
+                total_inserted += batch.num_rows
+                self.logger.debug(f"Inserido batch de {batch.num_rows} registros")
+                
         except Exception as e:
             self.logger.error(f"Falha no contrato de dados ao ingerir: {e}")
             raise            

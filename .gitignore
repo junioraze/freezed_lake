@@ -11,3 +11,5 @@ adhoc_zone
 *.egg-info
 .env.global
 .dag.index
+infra/data
+notebooks

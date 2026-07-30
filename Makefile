@@ -6,6 +6,7 @@ TERRAFORM = terraform
 IMAGE_BASE = obamasnow-base:latest
 IMAGE_TRANSFORMER = obamasnow-transformer:latest
 IMAGE_SCRAPER = obamasnow-scraper:latest
+IMAGE_LAB = obamasnow-lab:latest
 NETWORK_NAME = lakehouse_net
 ENV_FILE = obamasnow/src/obamasnow/.env
 
@@ -65,6 +66,12 @@ or-build-scraper:
 	@echo "[$(IMAGE_SCRAPER)] Limpando imagens antigas..."
 	docker image prune -f
 
+or-build-lab:
+	@echo "Construindo a imagem JupyterLab..."
+	docker build --target lab -t $(IMAGE_LAB) obamasnow/.	
+	@echo "[$(IMAGE_LAB)] Limpando imagens antigas..."
+	docker image prune -f
+
 # Build de todas as imagens em sequência
 or-build-all: or-build-base or-build-transformer or-build-scraper
 
@@ -84,3 +91,13 @@ or-run-insert-logs:
 		--env-file $(ENV_FILE) \
 		$(IMAGE_SCRAPER) \
 		workers/insert/into_raw_replay_logs.py
+
+or-run-lab:
+	@echo "Iniciando JupyterLab em http://localhost:8888"
+	docker run --rm \
+		--network $(NETWORK_NAME) \
+		--env-file $(ENV_FILE) \
+		-p 8888:8888 \
+		-v $(PWD)/notebooks:/app/notebooks \
+		$(IMAGE_LAB)
+#persiste arquivos em /notebooks
