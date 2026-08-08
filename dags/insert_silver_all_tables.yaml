@@ -1,0 +1,26 @@
+name: "insert_silver_all_tables"
+description: "Parse logs into tables to silver layer."
+schedule: ""
+
+# infra env variables
+dotenv: "/dags/.env.global"
+
+steps:
+  - name: run-insert_silver_all_tables
+    container:
+      # worker config
+      image: obamasnow-base:latest
+      network: lakehouse_net
+      # script variable
+      env:
+        # env variables
+        - POLARIS_ENDPOINT=${env.POLARIS_ENDPOINT}
+        - POLARIS_REALM=${env.POLARIS_REALM}
+        - POLARIS_USER=${env.POLARIS_USER}
+        - POLARIS_PASS=${env.POLARIS_PASS}
+        - MINIO_ENDPOINT=${env.MINIO_ENDPOINT}
+        - MINIO_USER=${env.MINIO_USER}
+        - MINIO_PASS=${env.MINIO_PASS}
+        - CATALOG_BUCKET=${env.CATALOG_BUCKET}
+    # python entrypoint direct to script
+    run: workers/insert/silver_all_tables.py

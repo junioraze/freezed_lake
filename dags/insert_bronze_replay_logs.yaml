@@ -1,23 +1,17 @@
-name: "insert_raw_replay_logs"
-description: "Extract data from showdown.com and parse to raw.replay_logs"
+name: "insert_bronze_replay_logs"
+description: "Extract data from showdown.com and parse to bronze.replay_logs"
 schedule: ""
 
 # infra env variables
 dotenv: "/dags/.env.global"
 
 params:
-  - name: NAME_SPACE
-    type: string
-    default: raw
-  - name: TABLE_NAME
-    type: string
-    default: replay_logs
   - name: RANGE
     type: integer
     default: 100
 
 steps:
-  - name: run-insert_raw_replay_logs
+  - name: run-insert_bronze_replay_logs
     container:
       # worker config
       image: obamasnow-scraper:latest
@@ -25,8 +19,6 @@ steps:
       # script variable
       env:
         # job variables
-        - NAME_SPACE=${params.NAME_SPACE}
-        - TABLE_NAME=${params.TABLE_NAME}
         - RANGE=${params.RANGE}
         # env variables
         - POLARIS_ENDPOINT=${env.POLARIS_ENDPOINT}
@@ -38,4 +30,4 @@ steps:
         - MINIO_PASS=${env.MINIO_PASS}
         - CATALOG_BUCKET=${env.CATALOG_BUCKET}
     # python entrypoint direct to script
-    run: workers/insert/raw_replay_logs.py
+    run: workers/insert/bronze_replay_logs.py

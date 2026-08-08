@@ -6,8 +6,8 @@
 @polaris_user = root
 @polaris_pass = s3cr3t
 @catalog_name = lake
-@namespace_target = raw
-@table_target = replay_logs
+@namespace_target = silver
+@table_target = actions
 
 ### ============================================================================
 ### AUTH

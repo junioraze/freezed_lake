@@ -22,16 +22,6 @@ RUN uv pip install --system -e .
 
 ENTRYPOINT ["python"]
 
-
-# ==========================================
-# VARIANT: TRANSFORMER 
-# ==========================================
-FROM base AS transformer
-
-# Instala o pacote polars para transformações
-RUN uv pip install --system -e ".[transformer]"
-
-
 # ==========================================
 # VARIANT: SCRAPER 
 # ==========================================
@@ -49,23 +39,36 @@ ENV CHROME_BIN=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Instala as dependências de scraping e transformação
-RUN uv pip install --system -e ".[scraper,transformer]"
+RUN uv pip install --system -e ".[scraper]"
 
 # ==========================================
 # VARIANT: LAB (JupyterLab)
 # ==========================================
 FROM base AS lab
 
-# Instala dependências do JupyterLab
-RUN uv pip install --system -e ".[lab,transformer]"
+RUN apt-get update && apt-get install -y nodejs npm && apt-get clean
 
-# Configura JupyterLab para usar o tema escuro por padrão
+RUN uv pip install --system -e ".[lab]"
+
+RUN jupyter labextension install jupyter-cytoscape \
+    && jupyter lab build
+
 RUN mkdir -p /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension
 RUN echo '{"theme": "JupyterLab Dark"}' > /root/.jupyter/lab/user-settings/@jupyterlab/apputils-extension/themes.jupyterlab-settings
 
-# Expõe a porta padrão do JupyterLab
 EXPOSE 8888
 
-# Comando padrão: inicia o JupyterLab
 ENTRYPOINT []
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+
+# ==========================================
+# VARIANT: MARIMO
+# ==========================================
+FROM base AS marimo
+
+RUN uv pip install --system -e ".[marimo]"
+
+EXPOSE 2718
+
+ENTRYPOINT []
+CMD ["marimo", "edit", "--host", "0.0.0.0", "--port", "2718", "/app/notebooks"]

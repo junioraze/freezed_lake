@@ -8,18 +8,19 @@ version = "0.1.0"
 description = "Base para os workers com garantia do uso correto da integração."
 dependencies = [
     "pyiceberg[s3fs,pyarrow]",
+    "polars"
 ]
 
 [project.optional-dependencies]
-transformer = ["polars"]
+marimo = [
+            "marimo",
+            "plotly",
+            "pandas",
+            "duckdb",
+            "altair",
+            "ruff"
+    ]
 scraper = ["selenium","aiohttp"]
-lab = [
-    "altair",
-    "jupyterlab",
-    "notebook",
-    "jupyterlab-night", 
-    "ipywidgets",        
-]  
 
 [tool.setuptools.packages.find]
 where = ["src"]
